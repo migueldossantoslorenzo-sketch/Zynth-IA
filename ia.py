@@ -58,7 +58,7 @@ st.markdown(f"""
     .stChatMessage {{ background-color: #0d0d0d; border-radius: 10px; border: 1px solid #222; }}
     p, h1, h2, h3, span, label {{ color: white !important; }}
     .badge {{ color: {st.session_state.user_data['cor']}; font-weight: bold; border: 1px solid; border-radius: 5px; text-align: center; padding: 5px; }}
-    #MainMenu, footer, header {{ visibility: hidden; }}
+   #MainMenu, footer { visibility: hidden; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -150,4 +150,5 @@ if prompt:
                 st.error(f"Erro: {e}")
                 msg_final = {"role": "assistant", "content": "Erro no núcleo."}
     
+
     st.session_state.historico.append(msg_final)
