@@ -2,12 +2,12 @@ import streamlit as st
 import google.generativeai as genai
 import urllib.parse
 
-# --- 1. CONFIGURAÇÕES TÉCNICAS (FORÇANDO O MENU A FICAR ABERTO) ---
+# --- 1. CONFIGURAÇÕES ---
 st.set_page_config(
     page_title="Zynth IA 💠", 
     layout="wide", 
     page_icon="💠",
-    initial_sidebar_state="expanded" # <--- ISSO AQUI OBRIGA O MENU A APARECER
+    initial_sidebar_state="expanded" 
 )
 
 # Sistema de Chave API
@@ -42,7 +42,7 @@ if "logado" not in st.session_state: st.session_state.logado = False
 if "historico" not in st.session_state: st.session_state.historico = []
 if "tema" not in st.session_state: st.session_state.tema = "Escuro"
 
-# --- 4. LÓGICA DE LOGIN ---
+# --- 4. LOGIN ---
 if not st.session_state.logado:
     st.title("💠 Zynth IA - Login")
     u = st.text_input("Usuário")
@@ -57,13 +57,13 @@ if not st.session_state.logado:
 # --- 5. SISTEMA DE TEMAS ---
 plano = st.session_state.user_data["plano"]
 is_pro = "Free" not in plano
+cor_u = st.session_state.user_data["cor"]
 
 if st.session_state.tema == "Escuro":
     cf, ct, cc, cb = "#050505", "#ffffff", "#0d0d0d", "#1a1a1a"
 else:
     cf, ct, cc, cb = "#ffffff", "#000000", "#f0f2f6", "#d1d1d1"
 
-# CSS LIGEIRAMENTE MAIS "BOZINHO" (NÃO ESCONDE O HEADER)
 st.markdown(f"""
     <style>
     .stApp {{ background-color: {cf}; color: {ct}; }}
@@ -71,48 +71,49 @@ st.markdown(f"""
     .stChatMessage {{ background-color: {cc}; border: 1px solid {cb}; border-radius: 10px; }}
     p, h1, h2, h3, span, li, label {{ color: {ct} !important; }}
     .stChatInput {{ border-radius: 20px; border: 1px solid {cb} !important; }}
-    .pro-box {{ border: 2px solid {st.session_state.user_data['cor']}; padding: 10px; border-radius: 10px; }}
-    #MainMenu, footer {{ visibility: hidden; }} 
+    .pro-box {{ border: 2px solid {cor_u}; padding: 10px; border-radius: 10px; }}
+    /* BOTÃO DE MENU SEMPRE VISÍVEL */
+    button[kind="header"] {{ background-color: #ff4b4b !important; color: white !important; border-radius: 5px; }}
+    #MainMenu, footer {{ visibility: hidden; }}
     </style>
     """, unsafe_allow_html=True)
 
 # --- 6. BARRA LATERAL ---
 with st.sidebar:
     st.title("💠 Zynth IA")
-    cor_u = st.session_state.user_data["cor"]
     st.markdown(f'<p style="color:{cor_u}; font-weight:bold; border:1px solid; border-radius:5px; text-align:center; padding:5px;">{plano}</p>', unsafe_allow_html=True)
     st.write(f"Operador: **{st.session_state.user_name}**")
     
     st.write("---")
     st.subheader("⚙️ Configurações")
-    temas = ["Escuro", "Claro"]
-    if is_pro: temas += ["Neon", "Ouro"]
-    t_sel = st.selectbox("Estilo:", temas, index=0)
+    t_sel = st.selectbox("Estilo:", ["Escuro", "Claro"], index=0 if st.session_state.tema == "Escuro" else 1)
     if t_sel != st.session_state.tema:
         st.session_state.tema = t_sel
         st.rerun()
 
     st.write("---")
-    arqs = st.file_uploader("Arquivos:", accept_multiple_files=True)
-    
+    arqs = st.file_uploader("Subir Arquivos:", accept_multiple_files=True)
     conteudo_extra = ""
     if arqs:
         for a in arqs:
-            try: conteudo_extra += f"\n{a.read().decode('utf-8')}\n"
+            try: conteudo_extra += f"\nConteúdo de {a.name}:\n{a.read().decode('utf-8')}\n"
             except: pass
+        st.success(f"{len(arqs)} arquivos prontos.")
 
     if not is_pro:
         st.write("---")
-        if st.button("💎 VER PIX"):
+        st.subheader("💎 Seja Zynth Pro")
+        if st.button("💳 VER PIX"):
             st.code("12981613285")
-            st.info("Mande o print no Insta! @lorenzomigueldossantos1")
+            st.info("Instagram: @lorenzomigueldossantos1")
+            st.caption("Liberação em até 24h.")
 
     if st.button("Logout"):
         st.session_state.logado = False
         st.rerun()
 
 # --- 7. CHAT ---
-st.title("Zynth Core v8.5.3")
+st.title("Zynth Core")
 
 for msg in st.session_state.historico:
     with st.chat_message(msg["role"]):
@@ -121,7 +122,7 @@ for msg in st.session_state.historico:
         else: st.write(msg["content"])
         if "img" in msg: st.image(msg["img"])
 
-prompt = st.chat_input("Comande a Zynth...")
+prompt = st.chat_input("Comande a Zynth IA...")
 
 if prompt:
     st.session_state.historico.append({"role": "user", "content": prompt})
@@ -145,5 +146,5 @@ if prompt:
                 msg_final = {"role": "assistant", "content": res.text}
             except Exception as e:
                 st.error(f"Erro: {e}")
-                msg_final = {"role": "assistant", "content": "Erro."}
+                msg_final = {"role": "assistant", "content": "Erro técnico."}
     st.session_state.historico.append(msg_final)
