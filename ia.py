@@ -2,14 +2,19 @@ import streamlit as st
 import google.generativeai as genai
 import urllib.parse
 
-# --- 1. CONFIGURAÇÕES TÉCNICAS ---
-st.set_page_config(page_title="Zynth IA 💠", layout="wide", page_icon="💠")
+# --- 1. CONFIGURAÇÕES TÉCNICAS (FORÇANDO O MENU A FICAR ABERTO) ---
+st.set_page_config(
+    page_title="Zynth IA 💠", 
+    layout="wide", 
+    page_icon="💠",
+    initial_sidebar_state="expanded" # <--- ISSO AQUI OBRIGA O MENU A APARECER
+)
 
-# Sistema de Chave API (Pega do Secrets no Deploy ou manual no PC)
+# Sistema de Chave API
 try:
     CHAVE_API = st.secrets["GOOGLE_API_KEY"]
 except:
-    CHAVE_API = "SUA_CHAVE_AQUI" # <--- SUA CHAVE PARA TESTE NO PC
+    CHAVE_API = "AIzaSyDHXw9PCV2ubR0WqIvVhn4gMKpPXEClzPw" 
 
 genai.configure(api_key=CHAVE_API)
 
@@ -25,7 +30,7 @@ def carregar_modelo():
 
 modelo_zynth = carregar_modelo()
 
-# --- 2. BANCO DE DADOS DE USUÁRIOS ---
+# --- 2. BANCO DE DADOS ---
 USUARIOS = {
     "lorenzo": {"senha": "123", "plano": "Dono 👑", "cor": "#ffeb3b"},
     "admin": {"senha": "999", "plano": "Zynth Pro ⚡", "cor": "#00e5ff"},
@@ -49,22 +54,16 @@ if not st.session_state.logado:
         else: st.error("Incorreto!")
     st.stop()
 
-# --- 5. SISTEMA DE TEMAS DINÂMICOS ---
+# --- 5. SISTEMA DE TEMAS ---
 plano = st.session_state.user_data["plano"]
 is_pro = "Free" not in plano
 
 if st.session_state.tema == "Escuro":
     cf, ct, cc, cb = "#050505", "#ffffff", "#0d0d0d", "#1a1a1a"
-elif st.session_state.tema == "Claro":
-    cf, ct, cc, cb = "#ffffff", "#000000", "#f0f2f6", "#d1d1d1"
-elif st.session_state.tema == "Neon" and is_pro:
-    cf, ct, cc, cb = "#000000", "#00e5ff", "#001a1a", "#00e5ff"
-elif st.session_state.tema == "Ouro" and is_pro:
-    cf, ct, cc, cb = "#0a0a00", "#ffd700", "#1a1a00", "#ffd700"
 else:
-    cf, ct, cc, cb = "#050505", "#ffffff", "#0d0d0d", "#1a1a1a"
+    cf, ct, cc, cb = "#ffffff", "#000000", "#f0f2f6", "#d1d1d1"
 
-# CSS CORRIGIDO (HEADER VISÍVEL PARA A SETINHA APARECER)
+# CSS LIGEIRAMENTE MAIS "BOZINHO" (NÃO ESCONDE O HEADER)
 st.markdown(f"""
     <style>
     .stApp {{ background-color: {cf}; color: {ct}; }}
@@ -73,11 +72,11 @@ st.markdown(f"""
     p, h1, h2, h3, span, li, label {{ color: {ct} !important; }}
     .stChatInput {{ border-radius: 20px; border: 1px solid {cb} !important; }}
     .pro-box {{ border: 2px solid {st.session_state.user_data['cor']}; padding: 10px; border-radius: 10px; }}
-    #MainMenu, footer {{ visibility: hidden; }}
+    #MainMenu, footer {{ visibility: hidden; }} 
     </style>
     """, unsafe_allow_html=True)
 
-# --- 6. BARRA LATERAL (PAINEL DO CEO) ---
+# --- 6. BARRA LATERAL ---
 with st.sidebar:
     st.title("💠 Zynth IA")
     cor_u = st.session_state.user_data["cor"]
@@ -88,40 +87,32 @@ with st.sidebar:
     st.subheader("⚙️ Configurações")
     temas = ["Escuro", "Claro"]
     if is_pro: temas += ["Neon", "Ouro"]
-    t_sel = st.selectbox("Tema Visual:", temas, index=0)
+    t_sel = st.selectbox("Estilo:", temas, index=0)
     if t_sel != st.session_state.tema:
         st.session_state.tema = t_sel
         st.rerun()
 
     st.write("---")
-    st.subheader("📁 Análise de Arquivos")
-    arqs = st.file_uploader("Subir arquivos:", accept_multiple_files=True)
-    if not is_pro and arqs and len(arqs) > 10:
-        st.error("Limite Free: 10 arquivos.")
-        arqs = arqs[:10]
-
+    arqs = st.file_uploader("Arquivos:", accept_multiple_files=True)
+    
     conteudo_extra = ""
     if arqs:
         for a in arqs:
-            try: conteudo_extra += f"\nConteúdo de {a.name}:\n{a.read().decode('utf-8')}\n"
+            try: conteudo_extra += f"\n{a.read().decode('utf-8')}\n"
             except: pass
-        st.success(f"{len(arqs)} arquivos prontos.")
 
     if not is_pro:
         st.write("---")
-        st.subheader("💎 Seja Zynth Pro")
-        if st.button("💳 VER PIX"):
-            st.write("Copia a chave abaixo:")
-            st.code("COLE_AQUI_O_PIX_DO_IRMAO")
-            st.info("Mande o print no Instagram!")
-            st.caption("Liberação em até 24h.")
+        if st.button("💎 VER PIX"):
+            st.code("12981613285")
+            st.info("Mande o print no Insta! @lorenzomigueldossantos1")
 
     if st.button("Logout"):
         st.session_state.logado = False
         st.rerun()
 
-# --- 7. CHAT E INTELIGÊNCIA ---
-st.title("Zynth Core v8.5.2")
+# --- 7. CHAT ---
+st.title("Zynth Core v8.5.3")
 
 for msg in st.session_state.historico:
     with st.chat_message(msg["role"]):
@@ -130,7 +121,7 @@ for msg in st.session_state.historico:
         else: st.write(msg["content"])
         if "img" in msg: st.image(msg["img"])
 
-prompt = st.chat_input("Insira o comando...")
+prompt = st.chat_input("Comande a Zynth...")
 
 if prompt:
     st.session_state.historico.append({"role": "user", "content": prompt})
@@ -140,23 +131,19 @@ if prompt:
 
     with st.chat_message("assistant"):
         if any(p in prompt.lower() for p in ["imagem", "foto", "gerar"]):
-            q = "8k, cinematic, hd" if is_pro else ""
+            q = "8k, cinematic" if is_pro else ""
             url = f"https://pollinations.ai/p/{urllib.parse.quote(prompt + ' ' + q)}?width=1024&height=1024&nologo=true"
             st.image(url)
-            msg_final = {"role": "assistant", "content": f"Imagem gerada: {prompt}", "img": url}
+            msg_final = {"role": "assistant", "content": f"Gerado: {prompt}", "img": url}
         else:
             try:
                 hist = [{"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]} for m in st.session_state.historico[:-1]]
                 if not is_pro: hist = hist[-20:]
-                
                 chat = modelo_zynth.start_chat(history=hist)
-                instrucao = "Você é a Zynth IA. Responda de forma superior." if is_pro else "Responda de forma simples."
-                response = chat.send_message(f"{instrucao}\n\n{conteudo_extra}\n\nPergunta: {prompt}")
-                
-                st.write(response.text)
-                msg_final = {"role": "assistant", "content": response.text}
+                res = chat.send_message(f"{conteudo_extra}\n\nPergunta: {prompt}")
+                st.write(res.text)
+                msg_final = {"role": "assistant", "content": res.text}
             except Exception as e:
                 st.error(f"Erro: {e}")
-                msg_final = {"role": "assistant", "content": "Erro técnico."}
-    
+                msg_final = {"role": "assistant", "content": "Erro."}
     st.session_state.historico.append(msg_final)
