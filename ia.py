@@ -18,20 +18,23 @@ except:
 
 genai.configure(api_key=CHAVE_API)
 
-# FUNÇÃO BLINDADA PARA O MODELO (Tenta vários nomes para evitar erro 404)
-@st.cache_resource
-def carregar_modelo_blindado():
-    nomes_para_testar = ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-pro']
-    for nome in nomes_para_testar:
-        try:
-            m = genai.GenerativeModel(nome)
-            # Testa se o modelo responde (só um teste rápido)
-            return m
-        except:
-            continue
-    return genai.GenerativeModel('gemini-pro') # Último recurso
+# FUNÇÃO DETETIVE (Sem cache para não guardar erro!)
+def carregar_modelo_real():
+    try:
+        # Pergunta para o Google: "Quais modelos eu posso usar?"
+        modelos_disponiveis = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        
+        # Tenta achar o flash, se não achar, pega o Pro, se não, pega o primeiro da lista
+        for nome in ['models/gemini-1.5-flash', 'models/gemini-pro', 'models/gemini-1.0-pro']:
+            if nome in modelos_disponiveis:
+                return genai.GenerativeModel(nome)
+        
+        return genai.GenerativeModel(modelos_disponiveis[0])
+    except Exception as e:
+        # Se tudo der errado, usa o nome clássico
+        return genai.GenerativeModel('gemini-pro')
 
-modelo_zynth = carregar_modelo_blindado()
+modelo_zynth = carregar_modelo_real()
 
 # --- 2. BANCO DE DADOS ---
 USUARIOS = {
@@ -75,17 +78,12 @@ st.markdown(f"""
     p, h1, h2, h3, span, li, label {{ color: {ct} !important; }}
     .stChatInput {{ border-radius: 20px; border: 1px solid {cb} !important; }}
     .pro-box {{ border: 2px solid {cor_u}; padding: 10px; border-radius: 10px; box-shadow: 0 0 10px {cor_u}; }}
-    
-    /* BOTÃO NEON PARA CASO FECHE O MENU */
     button[data-testid="stSidebarCollapseButton"] {{
         background-color: #00e5ff !important;
         color: black !important;
         border-radius: 50% !important;
-        width: 45px !important;
-        height: 45px !important;
         box-shadow: 0 0 15px #00e5ff !important;
     }}
-    
     #MainMenu, footer {{ visibility: hidden; }}
     </style>
     """, unsafe_allow_html=True)
@@ -97,7 +95,6 @@ with st.sidebar:
     st.write(f"Operador: **{st.session_state.user_name}**")
     
     st.write("---")
-    st.subheader("⚙️ Configurações")
     t_sel = st.selectbox("Estilo Visual:", ["Escuro", "Claro"], index=0)
     if t_sel != st.session_state.tema:
         st.session_state.tema = t_sel
@@ -113,10 +110,8 @@ with st.sidebar:
 
     if not is_pro:
         st.write("---")
-        st.subheader("💎 Seja Zynth Pro")
         if st.button("💳 VER PIX"):
             st.code("12 98161-3285")
-            st.info("Instagram: @lorenzomigueldossantos1")
 
     if st.button("Logout"):
         st.session_state.logado = False
@@ -148,24 +143,12 @@ if prompt:
             msg_final = {"role": "assistant", "content": f"Gerado: {prompt}", "img": url}
         else:
             try:
-                # Sistema de chat com tentativa e erro para o modelo
-                hist = [{"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]} for m in st.session_state.historico[:-1]]
-                if not is_pro: hist = hist[-20:]
-                
-                chat = modelo_zynth.start_chat(history=hist)
-                instrucao = "Você é a Zynth IA. Responda de forma épica." if is_pro else "Responda de forma simples."
-                response = chat.send_message(f"{instrucao}\n\n{conteudo_extra}\n\nPergunta: {prompt}")
-                
+                # Tenta gerar a resposta
+                response = modelo_zynth.generate_content(f"{conteudo_extra}\n\nPergunta: {prompt}")
                 st.write(response.text)
                 msg_final = {"role": "assistant", "content": response.text}
             except Exception as e:
-                # SE O CHAT COM HISTÓRICO FALHAR, TENTA RESPOSTA DIRETA
-                try:
-                    res_simples = modelo_zynth.generate_content(prompt)
-                    st.write(res_simples.text)
-                    msg_final = {"role": "assistant", "content": res_simples.text}
-                except:
-                    st.error(f"Erro Crítico: {e}")
-                    msg_final = {"role": "assistant", "content": "Erro."}
+                st.error(f"Erro no núcleo Zynth: {e}")
+                msg_final = {"role": "assistant", "content": "Erro."}
     
     st.session_state.historico.append(msg_final)
